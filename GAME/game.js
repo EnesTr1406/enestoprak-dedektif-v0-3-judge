@@ -5276,21 +5276,14 @@ function init() {
   document.body.dataset.currentScreen = GameState.currentScreen;
   ThemeManager.init();
 
-  const EMBEDDED_OPENAI_API_KEY = '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';
-
   // Hikaye listesini yükle
   loadStoryList();
 
-  // API Key: doğrudan koddan otomatik yükle
-  (function loadEmbeddedApiKey() {
-    const input = document.getElementById('api-key-input');
-    if (!input) return;
-
-    const key = String(EMBEDDED_OPENAI_API_KEY || '').trim();
-    if (key && key.startsWith('sk-')) {
-      input.value = key;
-    }
-  })();
+  const apiKeyInput = document.getElementById('api-key-input');
+  if (apiKeyInput) {
+    apiKeyInput.value = '';
+    apiKeyInput.focus();
+  }
 
   // Oyuna başla butonu
   document.getElementById('btn-start-game').addEventListener('click', async () => {
