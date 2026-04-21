@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEDEKTIF_OPEN_BROWSER=0 \
+    PORT=8080
+
+COPY . /app
+
+EXPOSE 8080
+
+CMD ["python3", "GAME/baslat.py"]

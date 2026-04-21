@@ -1,0 +1,5 @@
+GAME/api
+*/save/
+*/save/**
+**/__pycache__/
+.DS_Store

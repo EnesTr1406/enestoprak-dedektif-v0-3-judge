@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dedektif Ucuz</title>
+  <script>
+    (function() {
+      var storageKey = 'dedektif-theme';
+      var systemTheme = 'dark';
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          systemTheme = 'light';
+        }
+      } catch (_) {}
+
+      try {
+        var storedTheme = localStorage.getItem(storageKey);
+        var theme = storedTheme === 'light' || storedTheme === 'dark'
+          ? storedTheme
+          : systemTheme;
+        document.documentElement.dataset.theme = theme;
+      } catch (_) {
+        document.documentElement.dataset.theme = systemTheme;
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="theme-switcher" class="theme-switcher" role="group" aria-label="Tema seçici">
+    <span class="theme-switcher-label">Tema</span>
+    <button type="button" class="theme-option" data-theme-option="dark" aria-pressed="false">Gece</button>
+    <button type="button" class="theme-option" data-theme-option="light" aria-pressed="false">Aydınlık</button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- API KEY GİRİŞ EKRANI                        -->
+  <!-- ============================================ -->
+  <div id="screen-apikey" class="screen active">
+    <div class="center-box">
+      <h1 class="game-title">🔍 DEDEKTİF UCUZ</h1>
+      <p class="subtitle">Noir Dedektiflik Oyunu - dusuk maliyet optimizasyonlu surum</p>
+      <div class="api-form">
+        <label>Hikaye Seçimi</label>
+        <div id="story-cards" class="story-cards">
+          <p class="empty-text">Hikayeler yükleniyor...</p>
+        </div>
+        <p id="story-error" class="error-text"></p>
+        <label for="api-key-input">OpenAI API Anahtarı</label>
+        <input type="password" id="api-key-input" placeholder="sk-..." autocomplete="off">
+        <label for="model-select">Model</label>
+        <select id="model-select">
+          <option value="smart-low-cost" selected>Akilli dusuk maliyet (onerilen)</option>
+          <option value="gpt-5-mini">gpt-5-mini (tek model, dengeli)</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini (en ucuz)</option>
+          <option value="gpt-4.1">gpt-4.1 (daha guclu fallbacksiz)</option>
+          <option value="gpt-5">gpt-5 (en yuksek kalite)</option>
+        </select>
+        <p class="empty-text">Akilli mod, karakter ve danismanda gpt-5-mini; mekan, ipucu ve ozetlerde gpt-4.1-mini kullanir.</p>
+        <button id="btn-start-game" class="btn-primary">Oyuna Başla</button>
+        <p id="api-error" class="error-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- GİRİŞ / TANITIM EKRANI                      -->
+  <!-- ============================================ -->
+  <div id="screen-intro" class="screen">
+    <div class="center-box intro-box">
+      <h1 id="intro-title" class="game-title"></h1>
+      <p id="intro-subtitle" class="subtitle"></p>
+      <div id="intro-text" class="intro-narrative"></div>
+      <button id="btn-begin" class="btn-primary">Soruşturmaya Başla</button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- ANA OYUN EKRANI                              -->
+  <!-- ============================================ -->
+  <div id="screen-game" class="screen">
+
+    <!-- Üst Bar -->
+    <header id="game-header">
+      <div class="header-left">
+        <span class="header-title" id="header-game-title">🔍 DEDEKTİF UCUZ</span>
+      </div>
+      <div class="header-center">
+        <span id="current-context-label">Soruşturma</span>
+      </div>
+      <div class="header-right">
+        <span id="turn-counter" title="Toplam API çağrısı">Tur: 0</span>
+        <span id="phase-label" title="Mevcut aşama">Aşama: 1</span>
+      </div>
+    </header>
+
+    <!-- Ana Layout: 3 Panel -->
+    <div id="main-layout">
+
+      <!-- SOL PANEL: Mekanlar + İpuçları -->
+      <aside id="panel-left" class="panel">
+        <section class="panel-section">
+          <h2 class="panel-title">Mekanlar</h2>
+          <ul id="list-locations" class="entity-list"></ul>
+        </section>
+        <section class="panel-section">
+          <h2 class="panel-title">İpuçları</h2>
+          <ul id="list-clues" class="entity-list"></ul>
+          <p id="no-clues-text" class="empty-text">Henüz ipucu bulunamadı.</p>
+        </section>
+      </aside>
+
+      <!-- ORTA PANEL: Etkileşim Alanı -->
+      <main id="panel-center">
+        <div id="character-presence-bar" class="character-presence-bar">
+          <div class="presence-header">
+            <span id="character-presence-name">Karakter okuması</span>
+            <span class="presence-hint">Anlık dış okuma</span>
+          </div>
+          <div class="presence-grid">
+            <div class="presence-block">
+              <span class="presence-label">Dış görünüş</span>
+              <div id="character-presence-look" class="presence-tags"></div>
+            </div>
+            <div class="presence-block">
+              <span class="presence-label">Ses tonu</span>
+              <div id="character-presence-voice" class="presence-tags"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Sohbet geçmişi -->
+        <div id="chat-area">
+          <div id="chat-messages"></div>
+        </div>
+        <!-- Mesaj giriş alanı -->
+        <div id="input-area">
+          <div id="tag-autocomplete" class="tag-autocomplete"></div>
+          <textarea id="user-input" placeholder="Soru sor, araştır, incele..." rows="2"></textarea>
+          <button id="btn-send" class="btn-send" title="Gönder">➤</button>
+        </div>
+      </main>
+
+      <!-- SAĞ PANEL: Karakterler + Danışman -->
+      <aside id="panel-right" class="panel">
+        <section class="panel-section">
+          <h2 class="panel-title">Şüpheliler</h2>
+          <ul id="list-characters" class="entity-list"></ul>
+        </section>
+        <section class="panel-section">
+          <h2 class="panel-title">Danışman</h2>
+          <div id="advisor-box">
+            <button id="btn-advisor" class="entity-item advisor-item">
+              <span class="entity-icon" id="advisor-icon">🎖️</span>
+              <span class="entity-name" id="advisor-name">Danışman</span>
+            </button>
+          </div>
+        </section>
+        <!-- Karar Merkezi (aşama 3'te görünür) -->
+        <section class="panel-section" id="accusation-section" style="display:none">
+          <h2 class="panel-title">Karar</h2>
+          <button id="btn-accusation" class="btn-accusation">⚖️ Karar Merkezi</button>
+        </section>
+      </aside>
+
+    </div>
+
+    <!-- ALT PANEL: Araştırma Notları (açılır/kapanır) -->
+    <div id="panel-bottom">
+      <button id="btn-toggle-notes" class="notes-toggle">
+        📋 Araştırma Notları <span id="notes-arrow">▲</span>
+      </button>
+      <div id="notes-content" class="notes-content collapsed">
+        <div id="notes-tabs" class="notes-tabs">
+          <button class="tab-btn active" data-tab="notes-locations">Mekanlar</button>
+          <button class="tab-btn" data-tab="notes-characters">Karakterler</button>
+          <button class="tab-btn" data-tab="notes-clues">İpuçları</button>
+        </div>
+        <div id="notes-body" class="notes-body">
+          <div id="notes-locations" class="notes-tab-content active">
+            <p class="empty-text">Henüz mekan notu yok.</p>
+          </div>
+          <div id="notes-characters" class="notes-tab-content">
+            <p class="empty-text">Henüz karakter notu yok.</p>
+          </div>
+          <div id="notes-clues" class="notes-tab-content">
+            <p class="empty-text">Henüz ipucu notu yok.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SUÇLAMA EKRANI                               -->
+  <!-- ============================================ -->
+  <div id="screen-accusation" class="screen">
+    <div class="center-box accusation-box">
+      <h1>⚖️ Karar Merkezi</h1>
+      <p id="accusation-intro" class="intro-narrative"></p>
+      <div id="accusation-evidence" class="evidence-summary">
+        <h3>Toplanan Deliller</h3>
+        <ul id="accusation-clue-list"></ul>
+      </div>
+      <div class="accusation-form">
+        <h3>Suçluyu Seç</h3>
+        <div id="accusation-suspects" class="suspect-grid"></div>
+        <button id="btn-accuse" class="btn-danger" disabled>Suçlamayı Onayla</button>
+        <button id="btn-back-to-game" class="btn-secondary">Geri Dön</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SONUÇ EKRANI                                  -->
+  <!-- ============================================ -->
+  <div id="screen-result" class="screen">
+    <div class="center-box result-box">
+      <h1 id="result-title"></h1>
+      <div id="result-text" class="intro-narrative"></div>
+      <button id="btn-restart" class="btn-primary">Yeni Oyun</button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- GÖRSEL YÜKLEME MODAL                          -->
+  <!-- ============================================ -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <h3 id="modal-title">Görsel Ekle</h3>
+      <div id="modal-preview" class="modal-preview"></div>
+      <input type="file" id="modal-file-input" accept="image/*" style="display:none">
+      <button id="modal-btn-select" class="btn-secondary">Dosya Seç</button>
+      <button id="modal-btn-remove" class="btn-secondary" style="display:none">Görseli Kaldır</button>
+      <button id="modal-btn-close" class="btn-secondary">Kapat</button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- BİLDİRİM (Aşama geçişi vs.)                  -->
+  <!-- ============================================ -->
+  <div id="notification" class="notification" style="display:none">
+    <p id="notification-text"></p>
+  </div>
+
+  <!-- GPT yükleniyor göstergesi -->
+  <div id="loading-overlay" class="loading-overlay" style="display:none">
+    <div class="loading-spinner"></div>
+    <p>Düşünülüyor...</p>
+  </div>
+
+  <!-- Scriptler -->
+  <script src="api.js"></script>
+  <script src="game.js"></script>
+
+</body>
+</html>
