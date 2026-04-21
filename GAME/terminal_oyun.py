@@ -173,6 +173,25 @@ def split_target_and_message(raw_value: str) -> Tuple[str, str]:
     return target.strip(), message.strip()
 
 
+def looks_like_freeform_location_query(raw_command: str) -> bool:
+    normalized = normalize_text(raw_command)
+    if not normalized:
+        return False
+    if re.search(r'\bne\s+var\b', normalized):
+        return True
+    tokens = set(re.findall(r'[a-z0-9]+', normalized))
+    return bool(tokens & {
+        'icerde',
+        'iceride',
+        'gorunuyor',
+        'gorebiliyor',
+        'gorebiliyo',
+        'gorebiliyorsun',
+        'gorebiliyosun',
+        'hangi',
+    })
+
+
 def extract_direct_quote(text: str) -> Optional[str]:
     for pattern in (r":\s*'([^']+)'", r':\s*"([^"]+)"'):
         match = re.search(pattern, str(text or ''))
@@ -1760,6 +1779,9 @@ def run_interactive(game: TerminalGame, start_new: bool) -> None:
             print('Terminal kaydi yazildi. Cikis yapiliyor.')
             return
         else:
+            if game.state.current_location and looks_like_freeform_location_query(raw_command):
+                game.inspect_current_location(raw_command)
+                continue
             print('Bilinmeyen komut. `yardim` yaz.')
 
 
