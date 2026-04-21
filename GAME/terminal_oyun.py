@@ -177,9 +177,9 @@ def looks_like_freeform_location_query(raw_command: str) -> bool:
     normalized = normalize_text(raw_command)
     if not normalized:
         return False
-    tokens = set(re.findall(r'[a-z0-9]+', normalized))
     if re.search(r'\bne\s+var\b', normalized):
         return True
+    tokens = set(re.findall(r'[a-z0-9]+', normalized))
     return bool(tokens & {
         'icerde',
         'iceride',
