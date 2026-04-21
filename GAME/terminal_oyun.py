@@ -177,20 +177,19 @@ def looks_like_freeform_location_query(raw_command: str) -> bool:
     normalized = normalize_text(raw_command)
     if not normalized:
         return False
-    return any(
-        token in normalized
-        for token in (
-            'icerde',
-            'iceride',
-            'ne var',
-            'gorunuyor',
-            'gorebiliyor',
-            'gorebiliyo',
-            'gorebiliyorsun',
-            'gorebiliyosun',
-            'hangi',
-        )
-    )
+    tokens = set(re.findall(r'[a-z0-9]+', normalized))
+    if re.search(r'\bne\s+var\b', normalized):
+        return True
+    return bool(tokens & {
+        'icerde',
+        'iceride',
+        'gorunuyor',
+        'gorebiliyor',
+        'gorebiliyo',
+        'gorebiliyorsun',
+        'gorebiliyosun',
+        'hangi',
+    })
 
 
 def extract_direct_quote(text: str) -> Optional[str]:
